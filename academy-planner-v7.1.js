@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Grepolis Dashboard & Academy Planner v7.1
+// @name         Grepolis Dashboard & Academy Planner v7.2
 // @namespace    http://tampermonkey.net/
-// @version      7.1
-// @description  Advanced Academy Planner with correct point calculations and library support
+// @version      7.2
+// @description  Advanced Academy Planner with correct point calculations, library support, and reset button
 // @author       ChatGPT
 // @match        *://*.grepolis.com/*
 // @grant        none
@@ -304,6 +304,18 @@
         renderAcademy();
     };
 
+    window.resetAcademy = function() {
+        if(confirm("🔄 Are you sure you want to reset all selected research? This cannot be undone!")) {
+            selectedRes = [];
+            try {
+                localStorage.removeItem('grepo_acad_selected');
+            } catch(e) {
+                console.warn('Failed to clear localStorage:', e);
+            }
+            renderAcademy();
+        }
+    };
+
     window.openAcademy = function() {
         acadModal.style.display = 'flex';
         acadOverlay.style.display = 'block';
@@ -466,7 +478,7 @@
                     const s = selectedRes.includes(r.n);
                     const icon = RESEARCH_ICONS[r.n] || '📚';
                     return `
-                    <div data-research="${r.n}" style="height:72px; background:${s?'#d4a574':'#3d2f21'}; border:2px solid ${s?'#FFD700':'#555'}; cursor:pointer; font-size:9px; text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:center; color:${s?'black':'white'}; border-radius:4px; padding:4px; font-weight:${s?'bold':'normal'}; transition: all 0.2s; box-shadow:${s?'0 0 10px rgba(212,165,116,0.6)':'none'}; hover: background-color: ${s?'#e5b88e':'#4a3a2a'};">
+                    <div data-research="${r.n}" style="height:72px; background:${s?'#d4a574':'#3d2f21'}; border:2px solid ${s?'#FFD700':'#555'}; cursor:pointer; font-size:9px; text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:center; color:${s?'black':'white'}; border-radius:4px; padding:4px; font-weight:${s?'bold':'normal'}; transition: all 0.2s; box-shadow:${s?'0 0 10px rgba(212,165,116,0.6)':'none'};">
                         <div style="font-size:20px; margin-bottom:2px;">${icon}</div>
                         <b style="line-height:1.1; font-size:8px;">${r.n}</b>
                         <div style="font-size:7px; margin-top:2px; opacity:0.9; background:rgba(0,0,0,0.3); padding:1px 3px; border-radius:2px;">${r.p} pts</div>
@@ -492,9 +504,12 @@
 
         acadModal.innerHTML = `
             <div style="display:flex; justify-content:space-between; margin-bottom:12px; border-bottom:2px solid gold; padding-bottom:10px; align-items:center; flex-wrap:wrap; gap:10px;">
-                <b style="color:gold; font-size:14px;">🏛️ ACADEMY PLANNER v7.1</b>
+                <b style="color:gold; font-size:14px;">🏛️ ACADEMY PLANNER v7.2</b>
                 <div style="font-size:12px;">POINTS: <span style="color:${statusColor}; font-weight:bold;">${total}</span>/156</div>
-                <button id="closeBtn" style="background:#e74c3c; color:white; border:none; cursor:pointer; padding:6px 12px; border-radius:4px; font-size:11px; font-weight:bold;">✕ Close</button>
+                <div style="display:flex; gap:6px;">
+                    <button id="resetBtn" style="background:#E67E22; color:white; border:none; cursor:pointer; padding:6px 12px; border-radius:4px; font-size:11px; font-weight:bold;">🔄 Reset</button>
+                    <button id="closeBtn" style="background:#e74c3c; color:white; border:none; cursor:pointer; padding:6px 12px; border-radius:4px; font-size:11px; font-weight:bold;">✕ Close</button>
+                </div>
             </div>
 
             <div style="background:rgba(0,0,0,0.3); border:2px solid ${statusColor === '#e74c3c' ? '#e74c3c' : statusColor === '#f39c12' ? '#f39c12' : 'gold'}; border-radius:6px; padding:12px; margin-bottom:12px;">
@@ -544,7 +559,12 @@
         });
 
         // Add event listeners to buttons
+        const resetBtn = acadModal.querySelector('#resetBtn');
         const closeBtn = acadModal.querySelector('#closeBtn');
+        
+        if (resetBtn) {
+            resetBtn.addEventListener('click', window.resetAcademy);
+        }
         if (closeBtn) {
             closeBtn.addEventListener('click', window.closeAcademy);
         }
@@ -588,7 +608,7 @@
         dashMenu.appendChild(btn);
     };
 
-    // Add buttons (removed Reset Planner)
+    // Add buttons
     addMenuBtn("🏛️ Academy Planner", window.openAcademy);
     addMenuBtn("💬 Discord Webhook", window.openWebhookSetup, "#5865F2");
     addMenuBtn("⚔️ Attack Alarm", () => alert("Attack Alarm is active"), "#FF6B6B");
@@ -618,6 +638,6 @@
 
     webhookOverlay.addEventListener('click', window.closeWebhookSetup);
 
-    console.log("✅ Grepolis Academy Planner v7.1 loaded!");
+    console.log("✅ Grepolis Academy Planner v7.2 loaded!");
 
 })();
