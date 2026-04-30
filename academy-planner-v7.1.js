@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         Grepolis Dashboard & Academy Planner v7.2
+// @name         Grepolis Academy Planner v1
 // @namespace    http://tampermonkey.net/
-// @version      7.2
-// @description  Advanced Academy Planner with correct point calculations, library support, and reset button
-// @author       ChatGPT
+// @version      1.0
+// @description  Advanced Academy Planner
+// @author       GFRCnlvng
 // @match        *://*.grepolis.com/*
 // @grant        none
 // ==/UserScript==
