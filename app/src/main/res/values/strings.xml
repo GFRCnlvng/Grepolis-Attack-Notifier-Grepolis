@@ -1,0 +1,32 @@
+<resources>
+    <string name="app_name">A.N.D. Grepolis</string>
+    <string name="welcome_title">Welcome!</string>
+    <string name="welcome_desc">This app forwards Grepolis attack alerts to Discord automatically.</string>
+    <string name="privacy_warning">Important: This app ONLY forwards Grepolis attack notifications. No other messages, personal data, or phone information is ever collected or shared.</string>
+    <string name="btn_test_discord">Send Test Message to Discord</string>
+    <string name="btn_manual_reply">Send Manual Reply (Backup)</string>
+    <string name="settings_saved">✅ Settings Saved!</string>
+    <string name="player_name_label">Player Name</string>
+    <string name="confirm_name">Confirm Player Name</string>
+    <string name="account_setup">Account Setup</string>
+    <string name="routing_title">Discord Routing</string>
+    <string name="webhook1_label">Default Webhook (Link 1)</string>
+    <string name="webhook1_hint">https://discord.com/api/webhooks/&#8230;</string>
+    <string name="tag1_label">Tag @everyone on Link 1</string>
+    <string name="webhook2_label">Secondary Webhook (Link 2)</string>
+    <string name="webhook2_hint">Optional link for specific words</string>
+    <string name="tag2_label">Tag @everyone on Link 2</string>
+    <string name="keywords_label">Link 2 Keywords</string>
+    <string name="keywords_hint">e.g. Asine, Chios</string>
+    <string name="keywords_desc">If message contains these words, Link 2 is used.</string>
+    <string name="reminders_title">Reminders</string>
+    <string name="time_restrictions_title">Time Restrictions</string>
+    <string name="only_during_hours_label">Only forward during specific hours</string>
+    <string name="hour_from_label">From (Hour)</string>
+    <string name="hour_to_label">To (Hour)</string>
+    <string name="night_bonus_example">Example: 23:00 to 07:00 covers the night bonus.</string>
+    <string name="permissions_title">Permissions</string>
+    <string name="perm_notif_access">1. Notification Access</string>
+    <string name="perm_battery_unrestricted">2. Battery Unrestricted</string>
+    <string name="btn_discord_support">Join Discord Support</string>
+</resources>

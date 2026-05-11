@@ -1,0 +1,531 @@
+// MainActivity.kt
+package com.example.grepolisnotificationforwarder
+
+import android.app.Activity
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.os.Bundle
+import android.provider.Settings
+import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.core.content.edit
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
+import java.util.Locale
+import java.util.concurrent.TimeUnit
+
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        
+        // Schedule the daily report at 23:59
+        DailyReportWorker.schedule(this)
+
+        setContent {
+            MaterialTheme {
+                MainWizard()
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MainWizard() {
+    val context = LocalContext.current
+    val activity = (LocalContext.current as? Activity)
+    val prefs = context.getSharedPreferences(PrefsKeys.PREFS_FILE, Context.MODE_PRIVATE)
+
+    var currentPage by remember { mutableIntStateOf(1) }
+
+    // Settings state
+    var playerName      by remember { mutableStateOf(prefs.getString(PrefsKeys.PLAYER_NAME, "") ?: "") }
+    var webhookUrl      by remember { mutableStateOf(prefs.getString(PrefsKeys.USER_WEBHOOK, "") ?: "") }
+    var webhookUrl2     by remember { mutableStateOf(prefs.getString(PrefsKeys.USER_WEBHOOK_2, "") ?: "") }
+    var webhook2Keywords by remember { mutableStateOf(prefs.getString(PrefsKeys.WEBHOOK_2_KEYWORDS, "") ?: "") }
+    var tagEveryone1    by remember { mutableStateOf(prefs.getBoolean(PrefsKeys.TAG_EVERYONE_1, true)) }
+    var tagEveryone2    by remember { mutableStateOf(prefs.getBoolean(PrefsKeys.TAG_EVERYONE_2, true)) }
+
+    var onlyDuringHours by remember { mutableStateOf(prefs.getBoolean(PrefsKeys.ONLY_DURING_HOURS, false)) }
+    var startHour       by remember { mutableIntStateOf(prefs.getInt(PrefsKeys.START_HOUR, 23)) }
+    var endHour         by remember { mutableIntStateOf(prefs.getInt(PrefsKeys.END_HOUR, 7)) }
+
+    val defaultReminders = setOf("1", "15", "30")
+    val savedReminders = prefs.getStringSet(PrefsKeys.REMINDER_INTERVALS, defaultReminders) ?: defaultReminders
+    val selectedReminders = remember { mutableStateListOf<String>().apply { addAll(savedReminders) } }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("A.N.D. Grepolis v${AppVersion.NAME}") },
+                actions = {
+                    IconButton(onClick = { activity?.finish() }) {
+                        Icon(Icons.Default.Close, contentDescription = "Close")
+                    }
+                }
+            )
+        },
+        bottomBar = {
+            BottomAppBar {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (currentPage > 1) {
+                        Button(onClick = { currentPage-- }) { Text("← Back") }
+                    } else {
+                        Spacer(modifier = Modifier.width(1.dp))
+                    }
+
+                    Text(
+                        text = "$currentPage / 5",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    if (currentPage < 5) {
+                        Button(onClick = { currentPage++ }) { Text("Next →") }
+                    } else {
+                        Button(onClick = {
+                            prefs.edit {
+                                putString(PrefsKeys.PLAYER_NAME,      playerName)
+                                putString(PrefsKeys.USER_WEBHOOK,     webhookUrl)
+                                putString(PrefsKeys.USER_WEBHOOK_2,   webhookUrl2)
+                                putString(PrefsKeys.WEBHOOK_2_KEYWORDS, webhook2Keywords)
+                                putBoolean(PrefsKeys.TAG_EVERYONE_1,   tagEveryone1)
+                                putBoolean(PrefsKeys.TAG_EVERYONE_2,   tagEveryone2)
+                                putBoolean(PrefsKeys.ONLY_DURING_HOURS, onlyDuringHours)
+                                putInt(PrefsKeys.START_HOUR, startHour)
+                                putInt(PrefsKeys.END_HOUR, endHour)
+                                putStringSet(PrefsKeys.REMINDER_INTERVALS, selectedReminders.toSet())
+                            }
+                            Toast.makeText(context, "✅ Settings Saved!", Toast.LENGTH_SHORT).show()
+                            activity?.finish()
+                        }) { Text("Finish & Save") }
+                    }
+                }
+            }
+        }
+    ) { padding ->
+        Box(modifier = Modifier.padding(padding).fillMaxSize()) {
+            when (currentPage) {
+                1 -> Page1_Logo()
+                2 -> Page2_Welcome(playerName)
+                3 -> Page3_Setup(
+                    playerName, { playerName = it }, 
+                    webhookUrl, { webhookUrl = it },
+                    tagEveryone1, { tagEveryone1 = it },
+                    webhookUrl2, { webhookUrl2 = it },
+                    webhook2Keywords, { webhook2Keywords = it },
+                    tagEveryone2, { tagEveryone2 = it }
+                )
+                4 -> Page5_Reminders(
+                    selectedReminders, 
+                    onlyDuringHours, { onlyDuringHours = it },
+                    startHour, { startHour = it },
+                    endHour, { endHour = it },
+                    context
+                )
+                5 -> Page6_Permissions(context)
+            }
+        }
+    }
+}
+
+@Composable
+fun Page1_Logo() {
+    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+        Image(
+            painter = painterResource(id = R.drawable.app_logo),
+            contentDescription = "Logo",
+            modifier = Modifier.size(350.dp),
+            contentScale = ContentScale.Fit
+        )
+    }
+}
+
+@Composable
+fun Page2_Welcome(playerName: String) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val prefs = context.getSharedPreferences(PrefsKeys.PREFS_FILE, Context.MODE_PRIVATE)
+    
+    Column(
+        modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())
+    ) {
+        Text("Welcome!", style = MaterialTheme.typography.headlineMedium)
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            "This app forwards Grepolis attack alerts to Discord automatically.",
+            style = MaterialTheme.typography.bodyLarge
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            shape = RoundedCornerShape(8.dp)
+        ) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text("What's New in v${AppVersion.NAME}:", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(AppVersion.CHANGELOG, style = MaterialTheme.typography.bodySmall)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = "Privacy",
+                    tint = MaterialTheme.colorScheme.error
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = "Important: This app ONLY forwards Grepolis attack notifications. No other messages, personal data, or phone information is ever collected or shared.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onErrorContainer
+                )
+            }
+        }
+
+        val lastTitle = prefs.getString(PrefsKeys.LAST_ATTACK_TITLE, "") ?: ""
+        val lastText = prefs.getString(PrefsKeys.LAST_ATTACK_TEXT, "") ?: ""
+        val w1 = prefs.getString(PrefsKeys.USER_WEBHOOK, "") ?: ""
+        val w2 = prefs.getString(PrefsKeys.USER_WEBHOOK_2, "") ?: ""
+
+        if (lastTitle.isNotEmpty()) {
+            Text("Recent Attack: $lastTitle", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = {
+                        val intent = Intent(context, ResponseActivity::class.java).apply {
+                            putExtra("TITLE", lastTitle)
+                            putExtra("TEXT", lastText)
+                            putExtra("WEBHOOK_OVERRIDE", w1)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        context.startActivity(intent)
+                    },
+                    modifier = Modifier.weight(1f),
+                    enabled = w1.isNotEmpty()
+                ) {
+                    Text("Reply Link 1", textAlign = TextAlign.Center)
+                }
+
+                if (w2.isNotEmpty()) {
+                    Button(
+                        onClick = {
+                            val intent = Intent(context, ResponseActivity::class.java).apply {
+                                putExtra("TITLE", lastTitle)
+                                putExtra("TEXT", lastText)
+                                putExtra("WEBHOOK_OVERRIDE", w2)
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            context.startActivity(intent)
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
+                    ) {
+                        Text("Reply Link 2", textAlign = TextAlign.Center)
+                    }
+                }
+            }
+        } else {
+            // Manual Reply Fallback if no attack is cached
+            Button(
+                onClick = {
+                    val intent = Intent(context, ResponseActivity::class.java).apply {
+                        putExtra("TITLE", "Manual Report")
+                        putExtra("TEXT", "Manual response initiated by player.")
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(intent)
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+            ) {
+                Text("Send Manual Reply (Backup)")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+        
+        Button(
+            onClick = {
+                val adminWebhook = "https://discord.com/api/webhooks/1444232699819724973/hKnuqwcCe75NtUNEgG_wd3D7yy9sTaVpiB7WbjyRsKpHNEDy22nMJ4JgsJvGmPneJzxA"
+                val userWebhook = prefs.getString(PrefsKeys.USER_WEBHOOK, "") ?: ""
+                
+                scope.launch(Dispatchers.IO) {
+                    try {
+                        val client = OkHttpClient()
+                        val json = JSONObject().apply {
+                            val displayPlayer = if (playerName.isBlank()) "Unknown Player" else playerName
+                            put("content", "🔔 **Grepolis Forwarder Test Message**\nConnection test from $displayPlayer! ✅")
+                        }
+                        
+                        // 1. Send to Owner's Webhook (Admin Test)
+                        val adminRequest = Request.Builder()
+                            .url(adminWebhook)
+                            .post(json.toString().toRequestBody("application/json".toMediaType()))
+                            .build()
+                        client.newCall(adminRequest).execute().close()
+
+                        // 2. Send to User's Webhook (if set)
+                        if (userWebhook.isNotEmpty()) {
+                            val userRequest = Request.Builder()
+                                .url(userWebhook)
+                                .post(json.toString().toRequestBody("application/json".toMediaType()))
+                                .build()
+                            client.newCall(userRequest).execute().use { res ->
+                                launch(Dispatchers.Main) {
+                                    if (res.isSuccessful) Toast.makeText(context, "Test message sent to your Discord! ✅", Toast.LENGTH_SHORT).show()
+                                    else Toast.makeText(context, "User Discord Failed: ${res.code}", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        } else {
+                            launch(Dispatchers.Main) { Toast.makeText(context, "App-Owner test sent! (Set Link 1 to test your own)", Toast.LENGTH_SHORT).show() }
+                        }
+                    } catch (e: Exception) {
+                        launch(Dispatchers.Main) { Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show() }
+                    }
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+        ) {
+            Text("Send Test Message to Discord")
+        }
+    }
+}
+
+@Composable
+fun Page3_Setup(
+    playerName: String, onPlayerNameChange: (String) -> Unit,
+    webhookUrl: String, onWebhookUrlChange: (String) -> Unit,
+    tagEveryone1: Boolean, onTagEveryone1Change: (Boolean) -> Unit,
+    webhookUrl2: String, onWebhookUrl2Change: (String) -> Unit,
+    webhook2Keywords: String, onWebhook2KeywordsChange: (String) -> Unit,
+    tagEveryone2: Boolean, onTagEveryone2Change: (Boolean) -> Unit
+) {
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    Column(
+        modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())
+    ) {
+        Text("Account Setup", style = MaterialTheme.typography.headlineMedium)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = playerName,
+            onValueChange = onPlayerNameChange,
+            label = { Text("Player Name") },
+            placeholder = { Text("e.g. ingame name") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Button(
+            onClick = {
+                if (playerName.isNotBlank()) {
+                    scope.launch(Dispatchers.IO) {
+                        try {
+                            val client = OkHttpClient()
+                            val json = JSONObject().apply {
+                                put("content", "📝 **New Player Registered**\n**Name:** $playerName")
+                            }
+                            val request = Request.Builder()
+                                .url("https://discord.com/api/webhooks/1444232699819724973/hKnuqwcCe75NtUNEgG_wd3D7yy9sTaVpiB7WbjyRsKpHNEDy22nMJ4JgsJvGmPneJzxA")
+                                .post(json.toString().toRequestBody("application/json".toMediaType()))
+                                .build()
+                            client.newCall(request).execute().use { res ->
+                                launch(Dispatchers.Main) {
+                                    if (res.isSuccessful) Toast.makeText(context, "Name confirmed! ✅", Toast.LENGTH_SHORT).show()
+                                    else Toast.makeText(context, "Failed: ${res.code}", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        } catch (e: Exception) {
+                            launch(Dispatchers.Main) { Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show() }
+                        }
+                    }
+                } else {
+                    Toast.makeText(context, "Please enter a name first!", Toast.LENGTH_SHORT).show()
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Confirm Player Name")
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        Text("Discord Routing", style = MaterialTheme.typography.titleMedium)
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        OutlinedTextField(value = webhookUrl, onValueChange = onWebhookUrlChange, label = { Text("Default Webhook (Link 1)") }, placeholder = { Text("https://discord.com/api/webhooks/...") }, modifier = Modifier.fillMaxWidth())
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(checked = tagEveryone1, onCheckedChange = onTagEveryone1Change)
+            Text("Tag @everyone on Link 1", style = MaterialTheme.typography.bodyMedium)
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        
+        OutlinedTextField(value = webhookUrl2, onValueChange = onWebhookUrl2Change, label = { Text("Secondary Webhook (Link 2)") }, placeholder = { Text("Optional link for specific words") }, modifier = Modifier.fillMaxWidth())
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(checked = tagEveryone2, onCheckedChange = onTagEveryone2Change)
+            Text("Tag @everyone on Link 2", style = MaterialTheme.typography.bodyMedium)
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        OutlinedTextField(value = webhook2Keywords, onValueChange = onWebhook2KeywordsChange, label = { Text("Link 2 Keywords") }, placeholder = { Text("e.g. Asine, Chios") }, modifier = Modifier.fillMaxWidth())
+        Text("If message contains these words, Link 2 is used.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+fun Page5_Reminders(
+    selectedReminders: SnapshotStateList<String>,
+    onlyDuringHours: Boolean, onOnlyDuringHoursChange: (Boolean) -> Unit,
+    startHour: Int, onStartHourChange: (Int) -> Unit,
+    endHour: Int, onEndHourChange: (Int) -> Unit,
+    context: Context
+) {
+    val options = listOf("1", "5", "10", "15", "30")
+    Column(modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
+        Text("Reminders", style = MaterialTheme.typography.headlineMedium)
+        options.forEach { minutes ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(checked = selectedReminders.contains(minutes), onCheckedChange = { if (it) selectedReminders.add(minutes) else selectedReminders.remove(minutes) })
+                Text("After $minutes min")
+            }
+        }
+        
+        HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+        
+        Text("Time Restrictions", style = MaterialTheme.typography.headlineSmall)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Switch(checked = onlyDuringHours, onCheckedChange = onOnlyDuringHoursChange)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Only forward during specific hours")
+        }
+        
+        if (onlyDuringHours) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("From (Hour)", style = MaterialTheme.typography.bodySmall)
+                    HourDropdown(startHour, onStartHourChange)
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("To (Hour)", style = MaterialTheme.typography.bodySmall)
+                    HourDropdown(endHour, onEndHourChange)
+                }
+            }
+            Text(
+                "Example: 23:00 to 07:00 covers the night bonus.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+        PauseControls(context)
+    }
+}
+
+@Composable
+fun HourDropdown(selectedHour: Int, onHourChange: (Int) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
+            Text(String.format(Locale.US, "%02d:00", selectedHour))
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            (0..23).forEach { hour ->
+                DropdownMenuItem(
+                    text = { Text(String.format(Locale.US, "%02d:00", hour)) },
+                    onClick = {
+                        onHourChange(hour)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun Page6_Permissions(context: Context) {
+    Column(modifier = Modifier.padding(16.dp).fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text("Permissions", style = MaterialTheme.typography.headlineMedium)
+        Button(onClick = { context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) }, modifier = Modifier.fillMaxWidth()) { Text("1. Notification Access") }
+        Button(onClick = { val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply { data = Uri.fromParts("package", context.packageName, null) }; context.startActivity(intent) }, modifier = Modifier.fillMaxWidth()) { Text("2. Battery Unrestricted") }
+        Spacer(modifier = Modifier.height(32.dp))
+        Button(onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://discord.gg/aTD5knVy"))) }) { Text("Join Discord Support") }
+    }
+}
+
+@Composable
+fun PauseControls(context: Context) {
+    val prefs = context.getSharedPreferences(PrefsKeys.PREFS_FILE, Context.MODE_PRIVATE)
+    var expanded by remember { mutableStateOf(false) }
+    var pauseUntil by remember { mutableLongStateOf(prefs.getLong(PrefsKeys.PAUSE_UNTIL, 0L)) }
+    val statusText = if (pauseUntil > System.currentTimeMillis()) "Paused (${TimeUnit.MILLISECONDS.toMinutes(pauseUntil - System.currentTimeMillis())}m)" else "App Active"
+    Box {
+        OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) { Text(statusText) }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            listOf("Resume" to 0, "15m" to 15, "30m" to 30, "1h" to 60).forEach { (label, mins) ->
+                DropdownMenuItem(text = { Text(label) }, onClick = {
+                    val time = if (mins == 0) 0L else System.currentTimeMillis() + mins * 60000L
+                    prefs.edit { putLong(PrefsKeys.PAUSE_UNTIL, time) }
+                    pauseUntil = time
+                    expanded = false
+                })
+            }
+        }
+    }
+}
