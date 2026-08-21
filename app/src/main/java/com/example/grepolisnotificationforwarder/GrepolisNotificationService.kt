@@ -37,6 +37,7 @@ class GrepolisNotificationService : NotificationListenerService() {
     private val prefs get() = getSharedPreferences(PrefsKeys.PREFS_FILE, Context.MODE_PRIVATE)
 
     private fun getPlayerName()      = prefs.getString(PrefsKeys.PLAYER_NAME, "Onbekend") ?: "Onbekend"
+    private fun getPlayerWorld()     = prefs.getString(PrefsKeys.PLAYER_WORLD, "") ?: ""
     
     private fun getWebhook1()        = prefs.getString(PrefsKeys.USER_WEBHOOK, "") ?: ""
     private fun getWebhook2()        = prefs.getString(PrefsKeys.USER_WEBHOOK_2, "") ?: ""
@@ -173,9 +174,12 @@ class GrepolisNotificationService : NotificationListenerService() {
         scope.launch {
             try {
                 val playerName = getPlayerName()
+                val playerWorld = getPlayerWorld()
+                val display = if (playerWorld.isNotBlank()) "$playerName ($playerWorld)" else playerName
+                
                 val jsonAdmin = JSONObject().apply {
                     put("type", "attack_alert")
-                    put("userName", playerName)
+                    put("userName", display)
                     put("title", title)
                     put("text", text)
                     put("count", count)
@@ -192,7 +196,7 @@ class GrepolisNotificationService : NotificationListenerService() {
                     }
 
                     val discordContent = JSONObject().apply {
-                        put("content", "${tagStr}🚨 **Grepolis Attack Alert**\n**Player:** $playerName\n**Title:** $title\n**Message:** $text\n**Total attacks:** $count")
+                        put("content", "${tagStr}🚨 **Grepolis Attack Alert**\n**Player:** $display\n**Title:** $title\n**Message:** $text\n**Total attacks:** $count")
                     }
                     client.newCall(Request.Builder().url(webhookUrl).post(discordContent.toString().toRequestBody("application/json".toMediaType())).build()).execute().use { it.close() }
                 }

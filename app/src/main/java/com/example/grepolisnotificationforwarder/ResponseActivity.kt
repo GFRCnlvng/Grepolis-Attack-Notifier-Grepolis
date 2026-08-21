@@ -149,7 +149,10 @@ class ResponseActivity : ComponentActivity() {
                     val playerName = prefs.getString(PrefsKeys.PLAYER_NAME, "Unknown") ?: "Unknown"
                     val userWebhook = prefs.getString(PrefsKeys.USER_WEBHOOK, "")?.trim() ?: ""
                     val userWebhook2 = prefs.getString(PrefsKeys.USER_WEBHOOK_2, "")?.trim() ?: ""
+                    val userWebhook3 = prefs.getString(PrefsKeys.USER_WEBHOOK_3, "")?.trim() ?: ""
+
                     val w2Keywords = prefs.getString(PrefsKeys.WEBHOOK_2_KEYWORDS, "")?.lowercase()?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() } ?: emptyList()
+                    val w3Keywords = prefs.getString(PrefsKeys.WEBHOOK_3_KEYWORDS, "")?.lowercase()?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() } ?: emptyList()
 
                     val mediaType = "application/json; charset=utf-8".toMediaType()
 
@@ -170,21 +173,38 @@ class ResponseActivity : ComponentActivity() {
                     // 2. Determine which Discord Webhook to use and if we should tag
                     val overrideWebhook = intent.getStringExtra("WEBHOOK_OVERRIDE")
                     var targetWebhook = if (!overrideWebhook.isNullOrEmpty()) overrideWebhook else userWebhook
-                    var shouldTag = if (targetWebhook == userWebhook2 && userWebhook2.isNotEmpty()) {
-                        prefs.getBoolean(PrefsKeys.TAG_EVERYONE_2, true)
-                    } else {
-                        prefs.getBoolean(PrefsKeys.TAG_EVERYONE_1, true)
+                    
+                    var shouldTag = when (targetWebhook) {
+                        userWebhook3 -> prefs.getBoolean(PrefsKeys.TAG_EVERYONE_3, true)
+                        userWebhook2 -> prefs.getBoolean(PrefsKeys.TAG_EVERYONE_2, true)
+                        else -> prefs.getBoolean(PrefsKeys.TAG_EVERYONE_1, true)
                     }
                     
                     if (overrideWebhook.isNullOrEmpty()) {
                         val combined = (originalAttack + " " + originalText).lowercase()
-                        for (key in w2Keywords) {
+                        
+                        // Link 3 has highest priority, then Link 2, then Default (Link 1)
+                        var foundKeyword = false
+                        for (key in w3Keywords) {
                             if (combined.contains(key)) {
-                                if (userWebhook2.isNotEmpty()) {
-                                    targetWebhook = userWebhook2
-                                    shouldTag = prefs.getBoolean(PrefsKeys.TAG_EVERYONE_2, true)
+                                if (userWebhook3.isNotEmpty()) {
+                                    targetWebhook = userWebhook3
+                                    shouldTag = prefs.getBoolean(PrefsKeys.TAG_EVERYONE_3, true)
+                                    foundKeyword = true
                                 }
                                 break
+                            }
+                        }
+
+                        if (!foundKeyword) {
+                            for (key in w2Keywords) {
+                                if (combined.contains(key)) {
+                                    if (userWebhook2.isNotEmpty()) {
+                                        targetWebhook = userWebhook2
+                                        shouldTag = prefs.getBoolean(PrefsKeys.TAG_EVERYONE_2, true)
+                                    }
+                                    break
+                                }
                             }
                         }
                     }

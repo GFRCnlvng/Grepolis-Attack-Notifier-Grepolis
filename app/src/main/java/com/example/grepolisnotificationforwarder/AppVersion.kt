@@ -17,7 +17,7 @@ object AppVersion {
     const val MAJOR = 1
     const val MINOR = 1
     const val PATCH = 2
-    const val BUILD = 0
+    const val BUILD = 1
 
     /**
      * Full version string — no "v" prefix here.
@@ -29,6 +29,7 @@ object AppVersion {
     val CHANGELOG = """
         • Keyword Routing: Three Discord Webhooks with keyword filtering.
         • Manual Response: Three reply buttons for targeted alerts.
+        • Connectivity: Added "Test Link" buttons for all 3 Discord webhooks.
         • UI Optimization: Added keyword setup for Link 1, 2, and 3.
         • Support Link: Deactivated Discord support link in settings.
     """.trimIndent()
