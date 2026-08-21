@@ -40,10 +40,13 @@ class GrepolisNotificationService : NotificationListenerService() {
     
     private fun getWebhook1()        = prefs.getString(PrefsKeys.USER_WEBHOOK, "") ?: ""
     private fun getWebhook2()        = prefs.getString(PrefsKeys.USER_WEBHOOK_2, "") ?: ""
+    private fun getWebhook3()        = prefs.getString(PrefsKeys.USER_WEBHOOK_3, "") ?: ""
     private fun getWebhook1Keywords() = prefs.getString(PrefsKeys.WEBHOOK_1_KEYWORDS, "") ?: ""
     private fun getWebhook2Keywords() = prefs.getString(PrefsKeys.WEBHOOK_2_KEYWORDS, "") ?: ""
+    private fun getWebhook3Keywords() = prefs.getString(PrefsKeys.WEBHOOK_3_KEYWORDS, "") ?: ""
     private fun shouldTagEveryone1() = prefs.getBoolean(PrefsKeys.TAG_EVERYONE_1, true)
     private fun shouldTagEveryone2() = prefs.getBoolean(PrefsKeys.TAG_EVERYONE_2, true)
+    private fun shouldTagEveryone3() = prefs.getBoolean(PrefsKeys.TAG_EVERYONE_3, true)
 
     private fun getPauseUntil()      = prefs.getLong(PrefsKeys.PAUSE_UNTIL, 0L)
 
@@ -108,10 +111,17 @@ class GrepolisNotificationService : NotificationListenerService() {
         val combined = (title + " " + text).lowercase()
         val w1 = getWebhook1()
         val w2 = getWebhook2()
+        val w3 = getWebhook3()
         val k1 = getWebhook1Keywords().lowercase().split(",").map { it.trim() }.filter { it.isNotEmpty() }
         val k2 = getWebhook2Keywords().lowercase().split(",").map { it.trim() }.filter { it.isNotEmpty() }
+        val k3 = getWebhook3Keywords().lowercase().split(",").map { it.trim() }.filter { it.isNotEmpty() }
 
-        // Check Link 2 keywords first
+        // Check Link 3 keywords first
+        for (key in k3) {
+            if (combined.contains(key)) return if (w3.isNotEmpty()) w3 else w1
+        }
+
+        // Check Link 2 keywords
         for (key in k2) {
             if (combined.contains(key)) return if (w2.isNotEmpty()) w2 else w1
         }
@@ -129,7 +139,12 @@ class GrepolisNotificationService : NotificationListenerService() {
         if (webhookUrl.isEmpty()) return
         
         val w2 = getWebhook2()
-        val shouldTag = if (webhookUrl == w2 && w2.isNotEmpty()) shouldTagEveryone2() else shouldTagEveryone1()
+        val w3 = getWebhook3()
+        val shouldTag = when (webhookUrl) {
+            w3 -> if (w3.isNotEmpty()) shouldTagEveryone3() else shouldTagEveryone1()
+            w2 -> if (w2.isNotEmpty()) shouldTagEveryone2() else shouldTagEveryone1()
+            else -> shouldTagEveryone1()
+        }
         
         val reminderIntervals = prefs.getStringSet(PrefsKeys.REMINDER_INTERVALS, setOf("1", "15", "30")) ?: setOf("1", "15", "30")
 
@@ -169,10 +184,11 @@ class GrepolisNotificationService : NotificationListenerService() {
 
                 if (webhookUrl.isNotEmpty()) {
                     val w2 = getWebhook2()
-                    val tagStr = if (webhookUrl == w2 && w2.isNotEmpty()) {
-                        if (shouldTagEveryone2()) "@everyone " else ""
-                    } else {
-                        if (shouldTagEveryone1()) "@everyone " else ""
+                    val w3 = getWebhook3()
+                    val tagStr = when (webhookUrl) {
+                        w3 -> if (w3.isNotEmpty() && shouldTagEveryone3()) "@everyone " else ""
+                        w2 -> if (w2.isNotEmpty() && shouldTagEveryone2()) "@everyone " else ""
+                        else -> if (shouldTagEveryone1()) "@everyone " else ""
                     }
 
                     val discordContent = JSONObject().apply {

@@ -27,10 +27,10 @@ object AppVersion {
 
     /** Highlights for this version */
     val CHANGELOG = """
-        • Daily Attack Report: Nightly summary sent to Discord at 23:59.
-        • Manual Reply: Backup button to respond if notifications were missed.
-        • Build Stability: Resolved 50+ errors by removing legacy duplicates.
-        • Version Sync: Aligned all metadata to v1.1.2.0 (Code 4).
+        • Keyword Routing: Three Discord Webhooks with keyword filtering.
+        • Manual Response: Three reply buttons for targeted alerts.
+        • UI Optimization: Added keyword setup for Link 1, 2, and 3.
+        • Support Link: Deactivated Discord support link in settings.
     """.trimIndent()
 
     /** Features currently in beta — shown as BETA badge in UI */

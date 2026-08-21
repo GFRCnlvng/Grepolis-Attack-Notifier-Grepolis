@@ -73,10 +73,15 @@ fun MainWizard() {
     // Settings state
     var playerName      by remember { mutableStateOf(prefs.getString(PrefsKeys.PLAYER_NAME, "") ?: "") }
     var webhookUrl      by remember { mutableStateOf(prefs.getString(PrefsKeys.USER_WEBHOOK, "") ?: "") }
+    var webhook1Keywords by remember { mutableStateOf(prefs.getString(PrefsKeys.WEBHOOK_1_KEYWORDS, "") ?: "") }
     var webhookUrl2     by remember { mutableStateOf(prefs.getString(PrefsKeys.USER_WEBHOOK_2, "") ?: "") }
     var webhook2Keywords by remember { mutableStateOf(prefs.getString(PrefsKeys.WEBHOOK_2_KEYWORDS, "") ?: "") }
+    var webhookUrl3     by remember { mutableStateOf(prefs.getString(PrefsKeys.USER_WEBHOOK_3, "") ?: "") }
+    var webhook3Keywords by remember { mutableStateOf(prefs.getString(PrefsKeys.WEBHOOK_3_KEYWORDS, "") ?: "") }
+    
     var tagEveryone1    by remember { mutableStateOf(prefs.getBoolean(PrefsKeys.TAG_EVERYONE_1, true)) }
     var tagEveryone2    by remember { mutableStateOf(prefs.getBoolean(PrefsKeys.TAG_EVERYONE_2, true)) }
+    var tagEveryone3    by remember { mutableStateOf(prefs.getBoolean(PrefsKeys.TAG_EVERYONE_3, true)) }
 
     var onlyDuringHours by remember { mutableStateOf(prefs.getBoolean(PrefsKeys.ONLY_DURING_HOURS, false)) }
     var startHour       by remember { mutableIntStateOf(prefs.getInt(PrefsKeys.START_HOUR, 23)) }
@@ -123,10 +128,14 @@ fun MainWizard() {
                             prefs.edit {
                                 putString(PrefsKeys.PLAYER_NAME,      playerName)
                                 putString(PrefsKeys.USER_WEBHOOK,     webhookUrl)
+                                putString(PrefsKeys.WEBHOOK_1_KEYWORDS, webhook1Keywords)
                                 putString(PrefsKeys.USER_WEBHOOK_2,   webhookUrl2)
                                 putString(PrefsKeys.WEBHOOK_2_KEYWORDS, webhook2Keywords)
+                                putString(PrefsKeys.USER_WEBHOOK_3,   webhookUrl3)
+                                putString(PrefsKeys.WEBHOOK_3_KEYWORDS, webhook3Keywords)
                                 putBoolean(PrefsKeys.TAG_EVERYONE_1,   tagEveryone1)
                                 putBoolean(PrefsKeys.TAG_EVERYONE_2,   tagEveryone2)
+                                putBoolean(PrefsKeys.TAG_EVERYONE_3,   tagEveryone3)
                                 putBoolean(PrefsKeys.ONLY_DURING_HOURS, onlyDuringHours)
                                 putInt(PrefsKeys.START_HOUR, startHour)
                                 putInt(PrefsKeys.END_HOUR, endHour)
@@ -147,10 +156,14 @@ fun MainWizard() {
                 3 -> Page3_Setup(
                     playerName, { playerName = it }, 
                     webhookUrl, { webhookUrl = it },
+                    webhook1Keywords, { webhook1Keywords = it },
                     tagEveryone1, { tagEveryone1 = it },
                     webhookUrl2, { webhookUrl2 = it },
                     webhook2Keywords, { webhook2Keywords = it },
-                    tagEveryone2, { tagEveryone2 = it }
+                    tagEveryone2, { tagEveryone2 = it },
+                    webhookUrl3, { webhookUrl3 = it },
+                    webhook3Keywords, { webhook3Keywords = it },
+                    tagEveryone3, { tagEveryone3 = it }
                 )
                 4 -> Page5_Reminders(
                     selectedReminders, 
@@ -233,43 +246,64 @@ fun Page2_Welcome(playerName: String) {
         val lastText = prefs.getString(PrefsKeys.LAST_ATTACK_TEXT, "") ?: ""
         val w1 = prefs.getString(PrefsKeys.USER_WEBHOOK, "") ?: ""
         val w2 = prefs.getString(PrefsKeys.USER_WEBHOOK_2, "") ?: ""
+        val w3 = prefs.getString(PrefsKeys.USER_WEBHOOK_3, "") ?: ""
 
         if (lastTitle.isNotEmpty()) {
             Text("Recent Attack: $lastTitle", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
             Spacer(modifier = Modifier.height(8.dp))
             
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(
-                    onClick = {
-                        val intent = Intent(context, ResponseActivity::class.java).apply {
-                            putExtra("TITLE", lastTitle)
-                            putExtra("TEXT", lastText)
-                            putExtra("WEBHOOK_OVERRIDE", w1)
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        }
-                        context.startActivity(intent)
-                    },
-                    modifier = Modifier.weight(1f),
-                    enabled = w1.isNotEmpty()
-                ) {
-                    Text("Reply Link 1", textAlign = TextAlign.Center)
-                }
-
-                if (w2.isNotEmpty()) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
                         onClick = {
                             val intent = Intent(context, ResponseActivity::class.java).apply {
                                 putExtra("TITLE", lastTitle)
                                 putExtra("TEXT", lastText)
-                                putExtra("WEBHOOK_OVERRIDE", w2)
+                                putExtra("WEBHOOK_OVERRIDE", w1)
                                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             }
                             context.startActivity(intent)
                         },
                         modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
+                        enabled = w1.isNotEmpty()
                     ) {
-                        Text("Reply Link 2", textAlign = TextAlign.Center)
+                        Text("Reply Link 1", textAlign = TextAlign.Center)
+                    }
+
+                    if (w2.isNotEmpty()) {
+                        Button(
+                            onClick = {
+                                val intent = Intent(context, ResponseActivity::class.java).apply {
+                                    putExtra("TITLE", lastTitle)
+                                    putExtra("TEXT", lastText)
+                                    putExtra("WEBHOOK_OVERRIDE", w2)
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+                                context.startActivity(intent)
+                            },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
+                        ) {
+                            Text("Reply Link 2", textAlign = TextAlign.Center)
+                        }
+                    }
+                }
+
+                if (w3.isNotEmpty()) {
+                    Button(
+                        onClick = {
+                            val intent = Intent(context, ResponseActivity::class.java).apply {
+                                putExtra("TITLE", lastTitle)
+                                putExtra("TEXT", lastText)
+                                putExtra("WEBHOOK_OVERRIDE", w3)
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            context.startActivity(intent)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6200EE)) // Deep Purple
+                    ) {
+                        Text("Reply Link 3", textAlign = TextAlign.Center)
                     }
                 }
             }
@@ -345,10 +379,14 @@ fun Page2_Welcome(playerName: String) {
 fun Page3_Setup(
     playerName: String, onPlayerNameChange: (String) -> Unit,
     webhookUrl: String, onWebhookUrlChange: (String) -> Unit,
+    webhook1Keywords: String, onWebhook1KeywordsChange: (String) -> Unit,
     tagEveryone1: Boolean, onTagEveryone1Change: (Boolean) -> Unit,
     webhookUrl2: String, onWebhookUrl2Change: (String) -> Unit,
     webhook2Keywords: String, onWebhook2KeywordsChange: (String) -> Unit,
-    tagEveryone2: Boolean, onTagEveryone2Change: (Boolean) -> Unit
+    tagEveryone2: Boolean, onTagEveryone2Change: (Boolean) -> Unit,
+    webhookUrl3: String, onWebhookUrl3Change: (String) -> Unit,
+    webhook3Keywords: String, onWebhook3KeywordsChange: (String) -> Unit,
+    tagEveryone3: Boolean, onTagEveryone3Change: (Boolean) -> Unit
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -403,22 +441,36 @@ fun Page3_Setup(
         Text("Discord Routing", style = MaterialTheme.typography.titleMedium)
         Spacer(modifier = Modifier.height(8.dp))
         
+        // Link 1
         OutlinedTextField(value = webhookUrl, onValueChange = onWebhookUrlChange, label = { Text("Default Webhook (Link 1)") }, placeholder = { Text("https://discord.com/api/webhooks/...") }, modifier = Modifier.fillMaxWidth())
         Row(verticalAlignment = Alignment.CenterVertically) {
             Checkbox(checked = tagEveryone1, onCheckedChange = onTagEveryone1Change)
             Text("Tag @everyone on Link 1", style = MaterialTheme.typography.bodyMedium)
         }
+        OutlinedTextField(value = webhook1Keywords, onValueChange = onWebhook1KeywordsChange, label = { Text("Link 1 Keywords (Optional)") }, placeholder = { Text("e.g. Asine, Chios") }, modifier = Modifier.fillMaxWidth())
+        
         Spacer(modifier = Modifier.height(12.dp))
         
+        // Link 2
         OutlinedTextField(value = webhookUrl2, onValueChange = onWebhookUrl2Change, label = { Text("Secondary Webhook (Link 2)") }, placeholder = { Text("Optional link for specific words") }, modifier = Modifier.fillMaxWidth())
         Row(verticalAlignment = Alignment.CenterVertically) {
             Checkbox(checked = tagEveryone2, onCheckedChange = onTagEveryone2Change)
             Text("Tag @everyone on Link 2", style = MaterialTheme.typography.bodyMedium)
         }
-        Spacer(modifier = Modifier.height(8.dp))
-        
         OutlinedTextField(value = webhook2Keywords, onValueChange = onWebhook2KeywordsChange, label = { Text("Link 2 Keywords") }, placeholder = { Text("e.g. Asine, Chios") }, modifier = Modifier.fillMaxWidth())
-        Text("If message contains these words, Link 2 is used.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Link 3
+        OutlinedTextField(value = webhookUrl3, onValueChange = onWebhookUrl3Change, label = { Text("Tertiary Webhook (Link 3)") }, placeholder = { Text("Optional link for specific words") }, modifier = Modifier.fillMaxWidth())
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(checked = tagEveryone3, onCheckedChange = onTagEveryone3Change)
+            Text("Tag @everyone on Link 3", style = MaterialTheme.typography.bodyMedium)
+        }
+        OutlinedTextField(value = webhook3Keywords, onValueChange = onWebhook3KeywordsChange, label = { Text("Link 3 Keywords") }, placeholder = { Text("e.g. Athens, Sparta") }, modifier = Modifier.fillMaxWidth())
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        Text("If message contains keywords, the respective Link is used. Link 1 is the default.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -505,7 +557,8 @@ fun Page6_Permissions(context: Context) {
         Button(onClick = { context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) }, modifier = Modifier.fillMaxWidth()) { Text("1. Notification Access") }
         Button(onClick = { val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply { data = Uri.fromParts("package", context.packageName, null) }; context.startActivity(intent) }, modifier = Modifier.fillMaxWidth()) { Text("2. Battery Unrestricted") }
         Spacer(modifier = Modifier.height(32.dp))
-        Button(onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://discord.gg/aTD5knVy"))) }) { Text("Join Discord Support") }
+        // Button(onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://discord.gg/aTD5knVy"))) }) { Text("Join Discord Support") }
+        Text("Support link deactivated.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
