@@ -30,6 +30,14 @@ object PrefsKeys {
     const val WEBHOOK_3_KEYWORDS  = "WEBHOOK_3_KEYWORDS"
     const val TAG_EVERYONE_3      = "TAG_EVERYONE_3"
 
+    const val USER_WEBHOOK_4      = "USER_WEBHOOK_4"
+    const val WEBHOOK_4_KEYWORDS  = "WEBHOOK_4_KEYWORDS"
+    const val TAG_EVERYONE_4      = "TAG_EVERYONE_4"
+
+    const val USER_WEBHOOK_5      = "USER_WEBHOOK_5"
+    const val WEBHOOK_5_KEYWORDS  = "WEBHOOK_5_KEYWORDS"
+    const val TAG_EVERYONE_5      = "TAG_EVERYONE_5"
+
     // -------------------------------------------------------------------------
     // App behaviour
     // -------------------------------------------------------------------------

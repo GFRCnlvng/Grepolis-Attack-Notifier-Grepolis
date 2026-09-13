@@ -27,11 +27,10 @@ object AppVersion {
 
     /** Highlights for this version */
     val CHANGELOG = """
-        • Keyword Routing: Three Discord Webhooks with keyword filtering.
-        • Manual Response: Three reply buttons for targeted alerts.
-        • Connectivity: Added "Test Link" buttons for all 3 Discord webhooks.
-        • UI Optimization: Added keyword setup for Link 1, 2, and 3.
-        • Support Link: Deactivated Discord support link in settings.
+        • Keyword Routing: Support for up to 5 Discord Webhooks with keyword filtering.
+        • Dynamic Setup: Add links one-by-one in the setup wizard.
+        • Enhanced UI: Manual reply and test buttons now support all 5 links.
+        • Improved Logic: Priority-based routing for multiple keyword matches.
     """.trimIndent()
 
     /** Features currently in beta — shown as BETA badge in UI */

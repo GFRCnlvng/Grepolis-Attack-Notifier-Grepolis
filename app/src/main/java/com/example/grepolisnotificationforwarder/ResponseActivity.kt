@@ -150,9 +150,13 @@ class ResponseActivity : ComponentActivity() {
                     val userWebhook = prefs.getString(PrefsKeys.USER_WEBHOOK, "")?.trim() ?: ""
                     val userWebhook2 = prefs.getString(PrefsKeys.USER_WEBHOOK_2, "")?.trim() ?: ""
                     val userWebhook3 = prefs.getString(PrefsKeys.USER_WEBHOOK_3, "")?.trim() ?: ""
+                    val userWebhook4 = prefs.getString(PrefsKeys.USER_WEBHOOK_4, "")?.trim() ?: ""
+                    val userWebhook5 = prefs.getString(PrefsKeys.USER_WEBHOOK_5, "")?.trim() ?: ""
 
                     val w2Keywords = prefs.getString(PrefsKeys.WEBHOOK_2_KEYWORDS, "")?.lowercase()?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() } ?: emptyList()
                     val w3Keywords = prefs.getString(PrefsKeys.WEBHOOK_3_KEYWORDS, "")?.lowercase()?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() } ?: emptyList()
+                    val w4Keywords = prefs.getString(PrefsKeys.WEBHOOK_4_KEYWORDS, "")?.lowercase()?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() } ?: emptyList()
+                    val w5Keywords = prefs.getString(PrefsKeys.WEBHOOK_5_KEYWORDS, "")?.lowercase()?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() } ?: emptyList()
 
                     val mediaType = "application/json; charset=utf-8".toMediaType()
 
@@ -175,6 +179,8 @@ class ResponseActivity : ComponentActivity() {
                     var targetWebhook = if (!overrideWebhook.isNullOrEmpty()) overrideWebhook else userWebhook
                     
                     var shouldTag = when (targetWebhook) {
+                        userWebhook5 -> prefs.getBoolean(PrefsKeys.TAG_EVERYONE_5, true)
+                        userWebhook4 -> prefs.getBoolean(PrefsKeys.TAG_EVERYONE_4, true)
                         userWebhook3 -> prefs.getBoolean(PrefsKeys.TAG_EVERYONE_3, true)
                         userWebhook2 -> prefs.getBoolean(PrefsKeys.TAG_EVERYONE_2, true)
                         else -> prefs.getBoolean(PrefsKeys.TAG_EVERYONE_1, true)
@@ -183,16 +189,46 @@ class ResponseActivity : ComponentActivity() {
                     if (overrideWebhook.isNullOrEmpty()) {
                         val combined = (originalAttack + " " + originalText).lowercase()
                         
-                        // Link 3 has highest priority, then Link 2, then Default (Link 1)
+                        // Priorities: 5 > 4 > 3 > 2 > 1
                         var foundKeyword = false
-                        for (key in w3Keywords) {
+                        
+                        // Link 5
+                        for (key in w5Keywords) {
                             if (combined.contains(key)) {
-                                if (userWebhook3.isNotEmpty()) {
-                                    targetWebhook = userWebhook3
-                                    shouldTag = prefs.getBoolean(PrefsKeys.TAG_EVERYONE_3, true)
+                                if (userWebhook5.isNotEmpty()) {
+                                    targetWebhook = userWebhook5
+                                    shouldTag = prefs.getBoolean(PrefsKeys.TAG_EVERYONE_5, true)
                                     foundKeyword = true
                                 }
                                 break
+                            }
+                        }
+                        
+                        // Link 4
+                        if (!foundKeyword) {
+                            for (key in w4Keywords) {
+                                if (combined.contains(key)) {
+                                    if (userWebhook4.isNotEmpty()) {
+                                        targetWebhook = userWebhook4
+                                        shouldTag = prefs.getBoolean(PrefsKeys.TAG_EVERYONE_4, true)
+                                        foundKeyword = true
+                                    }
+                                    break
+                                }
+                            }
+                        }
+
+                        // Link 3
+                        if (!foundKeyword) {
+                            for (key in w3Keywords) {
+                                if (combined.contains(key)) {
+                                    if (userWebhook3.isNotEmpty()) {
+                                        targetWebhook = userWebhook3
+                                        shouldTag = prefs.getBoolean(PrefsKeys.TAG_EVERYONE_3, true)
+                                        foundKeyword = true
+                                    }
+                                    break
+                                }
                             }
                         }
 

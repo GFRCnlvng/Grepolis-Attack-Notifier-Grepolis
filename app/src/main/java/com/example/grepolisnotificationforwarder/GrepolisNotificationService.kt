@@ -42,12 +42,18 @@ class GrepolisNotificationService : NotificationListenerService() {
     private fun getWebhook1()        = prefs.getString(PrefsKeys.USER_WEBHOOK, "") ?: ""
     private fun getWebhook2()        = prefs.getString(PrefsKeys.USER_WEBHOOK_2, "") ?: ""
     private fun getWebhook3()        = prefs.getString(PrefsKeys.USER_WEBHOOK_3, "") ?: ""
+    private fun getWebhook4()        = prefs.getString(PrefsKeys.USER_WEBHOOK_4, "") ?: ""
+    private fun getWebhook5()        = prefs.getString(PrefsKeys.USER_WEBHOOK_5, "") ?: ""
     private fun getWebhook1Keywords() = prefs.getString(PrefsKeys.WEBHOOK_1_KEYWORDS, "") ?: ""
     private fun getWebhook2Keywords() = prefs.getString(PrefsKeys.WEBHOOK_2_KEYWORDS, "") ?: ""
     private fun getWebhook3Keywords() = prefs.getString(PrefsKeys.WEBHOOK_3_KEYWORDS, "") ?: ""
+    private fun getWebhook4Keywords() = prefs.getString(PrefsKeys.WEBHOOK_4_KEYWORDS, "") ?: ""
+    private fun getWebhook5Keywords() = prefs.getString(PrefsKeys.WEBHOOK_5_KEYWORDS, "") ?: ""
     private fun shouldTagEveryone1() = prefs.getBoolean(PrefsKeys.TAG_EVERYONE_1, true)
     private fun shouldTagEveryone2() = prefs.getBoolean(PrefsKeys.TAG_EVERYONE_2, true)
     private fun shouldTagEveryone3() = prefs.getBoolean(PrefsKeys.TAG_EVERYONE_3, true)
+    private fun shouldTagEveryone4() = prefs.getBoolean(PrefsKeys.TAG_EVERYONE_4, true)
+    private fun shouldTagEveryone5() = prefs.getBoolean(PrefsKeys.TAG_EVERYONE_5, true)
 
     private fun getPauseUntil()      = prefs.getLong(PrefsKeys.PAUSE_UNTIL, 0L)
 
@@ -113,35 +119,36 @@ class GrepolisNotificationService : NotificationListenerService() {
         val w1 = getWebhook1()
         val w2 = getWebhook2()
         val w3 = getWebhook3()
+        val w4 = getWebhook4()
+        val w5 = getWebhook5()
         val k1 = getWebhook1Keywords().lowercase().split(",").map { it.trim() }.filter { it.isNotEmpty() }
         val k2 = getWebhook2Keywords().lowercase().split(",").map { it.trim() }.filter { it.isNotEmpty() }
         val k3 = getWebhook3Keywords().lowercase().split(",").map { it.trim() }.filter { it.isNotEmpty() }
+        val k4 = getWebhook4Keywords().lowercase().split(",").map { it.trim() }.filter { it.isNotEmpty() }
+        val k5 = getWebhook5Keywords().lowercase().split(",").map { it.trim() }.filter { it.isNotEmpty() }
 
-        // Check Link 3 keywords first
-        for (key in k3) {
-            if (combined.contains(key)) return if (w3.isNotEmpty()) w3 else w1
-        }
+        // Check priorities in reverse (highest Link index first)
+        for (key in k5) { if (combined.contains(key)) return if (w5.isNotEmpty()) w5 else w1 }
+        for (key in k4) { if (combined.contains(key)) return if (w4.isNotEmpty()) w4 else w1 }
+        for (key in k3) { if (combined.contains(key)) return if (w3.isNotEmpty()) w3 else w1 }
+        for (key in k2) { if (combined.contains(key)) return if (w2.isNotEmpty()) w2 else w1 }
+        for (key in k1) { if (combined.contains(key)) return w1 }
 
-        // Check Link 2 keywords
-        for (key in k2) {
-            if (combined.contains(key)) return if (w2.isNotEmpty()) w2 else w1
-        }
-        
-        // Check Link 1 keywords
-        for (key in k1) {
-            if (combined.contains(key)) return w1
-        }
-
-        // Default to Link 1
         return w1
     }
 
     private fun scheduleReminders(title: String, text: String, webhookUrl: String) {
         if (webhookUrl.isEmpty()) return
         
+        val w1 = getWebhook1()
         val w2 = getWebhook2()
         val w3 = getWebhook3()
+        val w4 = getWebhook4()
+        val w5 = getWebhook5()
+
         val shouldTag = when (webhookUrl) {
+            w5 -> if (w5.isNotEmpty()) shouldTagEveryone5() else shouldTagEveryone1()
+            w4 -> if (w4.isNotEmpty()) shouldTagEveryone4() else shouldTagEveryone1()
             w3 -> if (w3.isNotEmpty()) shouldTagEveryone3() else shouldTagEveryone1()
             w2 -> if (w2.isNotEmpty()) shouldTagEveryone2() else shouldTagEveryone1()
             else -> shouldTagEveryone1()
@@ -187,9 +194,15 @@ class GrepolisNotificationService : NotificationListenerService() {
                 client.newCall(Request.Builder().url(CLOUDFLARE_URL).post(jsonAdmin.toString().toRequestBody("application/json".toMediaType())).build()).execute().use { it.close() }
 
                 if (webhookUrl.isNotEmpty()) {
+                    val w1 = getWebhook1()
                     val w2 = getWebhook2()
                     val w3 = getWebhook3()
+                    val w4 = getWebhook4()
+                    val w5 = getWebhook5()
+
                     val tagStr = when (webhookUrl) {
+                        w5 -> if (w5.isNotEmpty() && shouldTagEveryone5()) "@everyone " else ""
+                        w4 -> if (w4.isNotEmpty() && shouldTagEveryone4()) "@everyone " else ""
                         w3 -> if (w3.isNotEmpty() && shouldTagEveryone3()) "@everyone " else ""
                         w2 -> if (w2.isNotEmpty() && shouldTagEveryone2()) "@everyone " else ""
                         else -> if (shouldTagEveryone1()) "@everyone " else ""

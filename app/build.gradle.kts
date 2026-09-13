@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -5,6 +7,57 @@ plugins {
 }
 
 android {
+    val appVersionFile = file("src/main/java/com/example/grepolisnotificationforwarder/AppVersion.kt")
+    var major = "1"
+    var minor = "1"
+    var patch = "2"
+    var build = "1"
+
+    if (appVersionFile.exists()) {
+        appVersionFile.forEachLine { line ->
+            if (line.contains("const val MAJOR =")) major = line.substringAfter("=").trim()
+            if (line.contains("const val MINOR =")) minor = line.substringAfter("=").trim()
+            if (line.contains("const val PATCH =")) patch = line.substringAfter("=").trim()
+            if (line.contains("const val BUILD =")) build = line.substringAfter("=").trim()
+        }
+    }
+
+    val versionPropsFile = file("version.properties")
+    val versionProps = Properties()
+    var currentVersionCode = 4
+    var currentBuildNumber = build.toIntOrNull() ?: 1
+
+    if (versionPropsFile.exists()) {
+        versionPropsFile.inputStream().use { versionProps.load(it) }
+        currentVersionCode = versionProps.getProperty("versionCode")?.toIntOrNull() ?: 4
+        currentBuildNumber = versionProps.getProperty("buildNumber")?.toIntOrNull() ?: currentBuildNumber
+    } else {
+        versionProps.setProperty("versionCode", currentVersionCode.toString())
+        versionProps.setProperty("buildNumber", currentBuildNumber.toString())
+        versionPropsFile.outputStream().use { versionProps.store(it, "Initial Automated Build Properties") }
+    }
+
+    val isReleaseBuild = gradle.startParameter.taskNames.any { it.contains("Release", ignoreCase = true) }
+
+    if (isReleaseBuild) {
+        currentVersionCode += 1
+        currentBuildNumber += 1
+        
+        versionProps.setProperty("versionCode", currentVersionCode.toString())
+        versionProps.setProperty("buildNumber", currentBuildNumber.toString())
+        versionPropsFile.outputStream().use { versionProps.store(it, "Automated Build Properties") }
+        
+        if (appVersionFile.exists()) {
+            val content = appVersionFile.readText()
+            val updatedContent = content.replace(
+                Regex("""const\s+val\s+BUILD\s*=\s*\d+"""),
+                "const val BUILD = $currentBuildNumber"
+            )
+            appVersionFile.writeText(updatedContent)
+        }
+        build = currentBuildNumber.toString()
+    }
+
     namespace = "com.example.grepolisnotificationforwarder"
     compileSdk = 34
 
@@ -12,8 +65,8 @@ android {
         applicationId = "com.example.grepolisnotificationforwarder"
         minSdk = 24
         targetSdk = 34
-        versionCode = 4
-        versionName = "1.1.2.0"
+        versionCode = currentVersionCode
+        versionName = "$major.$minor.$patch.$build"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

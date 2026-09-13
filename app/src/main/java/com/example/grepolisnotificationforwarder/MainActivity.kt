@@ -79,10 +79,16 @@ fun MainWizard() {
     var webhook2Keywords by remember { mutableStateOf(prefs.getString(PrefsKeys.WEBHOOK_2_KEYWORDS, "") ?: "") }
     var webhookUrl3     by remember { mutableStateOf(prefs.getString(PrefsKeys.USER_WEBHOOK_3, "") ?: "") }
     var webhook3Keywords by remember { mutableStateOf(prefs.getString(PrefsKeys.WEBHOOK_3_KEYWORDS, "") ?: "") }
+    var webhookUrl4     by remember { mutableStateOf(prefs.getString(PrefsKeys.USER_WEBHOOK_4, "") ?: "") }
+    var webhook4Keywords by remember { mutableStateOf(prefs.getString(PrefsKeys.WEBHOOK_4_KEYWORDS, "") ?: "") }
+    var webhookUrl5     by remember { mutableStateOf(prefs.getString(PrefsKeys.USER_WEBHOOK_5, "") ?: "") }
+    var webhook5Keywords by remember { mutableStateOf(prefs.getString(PrefsKeys.WEBHOOK_5_KEYWORDS, "") ?: "") }
     
     var tagEveryone1    by remember { mutableStateOf(prefs.getBoolean(PrefsKeys.TAG_EVERYONE_1, true)) }
     var tagEveryone2    by remember { mutableStateOf(prefs.getBoolean(PrefsKeys.TAG_EVERYONE_2, true)) }
     var tagEveryone3    by remember { mutableStateOf(prefs.getBoolean(PrefsKeys.TAG_EVERYONE_3, true)) }
+    var tagEveryone4    by remember { mutableStateOf(prefs.getBoolean(PrefsKeys.TAG_EVERYONE_4, true)) }
+    var tagEveryone5    by remember { mutableStateOf(prefs.getBoolean(PrefsKeys.TAG_EVERYONE_5, true)) }
 
     var onlyDuringHours by remember { mutableStateOf(prefs.getBoolean(PrefsKeys.ONLY_DURING_HOURS, false)) }
     var startHour       by remember { mutableIntStateOf(prefs.getInt(PrefsKeys.START_HOUR, 23)) }
@@ -135,9 +141,15 @@ fun MainWizard() {
                                 putString(PrefsKeys.WEBHOOK_2_KEYWORDS, webhook2Keywords)
                                 putString(PrefsKeys.USER_WEBHOOK_3,   webhookUrl3)
                                 putString(PrefsKeys.WEBHOOK_3_KEYWORDS, webhook3Keywords)
+                                putString(PrefsKeys.USER_WEBHOOK_4,   webhookUrl4)
+                                putString(PrefsKeys.WEBHOOK_4_KEYWORDS, webhook4Keywords)
+                                putString(PrefsKeys.USER_WEBHOOK_5,   webhookUrl5)
+                                putString(PrefsKeys.WEBHOOK_5_KEYWORDS, webhook5Keywords)
                                 putBoolean(PrefsKeys.TAG_EVERYONE_1,   tagEveryone1)
                                 putBoolean(PrefsKeys.TAG_EVERYONE_2,   tagEveryone2)
                                 putBoolean(PrefsKeys.TAG_EVERYONE_3,   tagEveryone3)
+                                putBoolean(PrefsKeys.TAG_EVERYONE_4,   tagEveryone4)
+                                putBoolean(PrefsKeys.TAG_EVERYONE_5,   tagEveryone5)
                                 putBoolean(PrefsKeys.ONLY_DURING_HOURS, onlyDuringHours)
                                 putInt(PrefsKeys.START_HOUR, startHour)
                                 putInt(PrefsKeys.END_HOUR, endHour)
@@ -154,7 +166,7 @@ fun MainWizard() {
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
             when (currentPage) {
                 1 -> Page1_Logo()
-                2 -> Page2_Welcome(playerName, playerWorld, webhookUrl, webhookUrl2, webhookUrl3)
+                2 -> Page2_Welcome(playerName, playerWorld, webhookUrl, webhookUrl2, webhookUrl3, webhookUrl4, webhookUrl5)
                 3 -> Page3_Setup(
                     playerName, { playerName = it },
                     playerWorld, { playerWorld = it },
@@ -166,7 +178,13 @@ fun MainWizard() {
                     tagEveryone2, { tagEveryone2 = it },
                     webhookUrl3, { webhookUrl3 = it },
                     webhook3Keywords, { webhook3Keywords = it },
-                    tagEveryone3, { tagEveryone3 = it }
+                    tagEveryone3, { tagEveryone3 = it },
+                    webhookUrl4, { webhookUrl4 = it },
+                    webhook4Keywords, { webhook4Keywords = it },
+                    tagEveryone4, { tagEveryone4 = it },
+                    webhookUrl5, { webhookUrl5 = it },
+                    webhook5Keywords, { webhook5Keywords = it },
+                    tagEveryone5, { tagEveryone5 = it }
                 )
                 4 -> Page5_Reminders(
                     selectedReminders, 
@@ -194,11 +212,19 @@ fun Page1_Logo() {
 }
 
 @Composable
-fun Page2_Welcome(playerName: String, playerWorld: String, w1: String, w2: String, w3: String) {
+fun Page2_Welcome(playerName: String, playerWorld: String, w1: String, w2: String, w3: String, w4: String, w5: String) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val prefs = context.getSharedPreferences(PrefsKeys.PREFS_FILE, Context.MODE_PRIVATE)
     
+    val webhooks = listOf(
+        Triple(w1, "Link 1", MaterialTheme.colorScheme.primary),
+        Triple(w2, "Link 2", MaterialTheme.colorScheme.tertiary),
+        Triple(w3, "Link 3", Color(0xFF6200EE)),
+        Triple(w4, "Link 4", Color(0xFF00796B)),
+        Triple(w5, "Link 5", Color(0xFFC2185B))
+    ).filter { it.first.isNotEmpty() }
+
     Column(
         modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())
     ) {
@@ -253,57 +279,27 @@ fun Page2_Welcome(playerName: String, playerWorld: String, w1: String, w2: Strin
             Spacer(modifier = Modifier.height(8.dp))
             
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(
-                        onClick = {
-                            val intent = Intent(context, ResponseActivity::class.java).apply {
-                                putExtra("TITLE", lastTitle)
-                                putExtra("TEXT", lastText)
-                                putExtra("WEBHOOK_OVERRIDE", w1)
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                // Chunk webhooks into pairs for row layout
+                webhooks.chunked(2).forEach { rowWebhooks ->
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        rowWebhooks.forEach { (url, label, color) ->
+                            Button(
+                                onClick = {
+                                    val intent = Intent(context, ResponseActivity::class.java).apply {
+                                        putExtra("TITLE", lastTitle)
+                                        putExtra("TEXT", lastText)
+                                        putExtra("WEBHOOK_OVERRIDE", url)
+                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    }
+                                    context.startActivity(intent)
+                                },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(containerColor = color)
+                            ) {
+                                Text("Reply $label", textAlign = TextAlign.Center, fontSize = 12.sp)
                             }
-                            context.startActivity(intent)
-                        },
-                        modifier = Modifier.weight(1f),
-                        enabled = w1.isNotEmpty()
-                    ) {
-                        Text("Reply Link 1", textAlign = TextAlign.Center)
-                    }
-
-                    if (w2.isNotEmpty()) {
-                        Button(
-                            onClick = {
-                                val intent = Intent(context, ResponseActivity::class.java).apply {
-                                    putExtra("TITLE", lastTitle)
-                                    putExtra("TEXT", lastText)
-                                    putExtra("WEBHOOK_OVERRIDE", w2)
-                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                }
-                                context.startActivity(intent)
-                            },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
-                        ) {
-                            Text("Reply Link 2", textAlign = TextAlign.Center)
                         }
-                    }
-                }
-
-                if (w3.isNotEmpty()) {
-                    Button(
-                        onClick = {
-                            val intent = Intent(context, ResponseActivity::class.java).apply {
-                                putExtra("TITLE", lastTitle)
-                                putExtra("TEXT", lastText)
-                                putExtra("WEBHOOK_OVERRIDE", w3)
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            }
-                            context.startActivity(intent)
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6200EE)) // Deep Purple
-                    ) {
-                        Text("Reply Link 3", textAlign = TextAlign.Center)
+                        if (rowWebhooks.size == 1) Spacer(modifier = Modifier.weight(1f))
                     }
                 }
             }
@@ -330,133 +326,68 @@ fun Page2_Welcome(playerName: String, playerWorld: String, w1: String, w2: Strin
         Text("Test Connectivity:", style = MaterialTheme.typography.labelLarge)
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Test Link 1 + Admin
-        Button(
-            onClick = {
-                val adminWebhook = "https://discord.com/api/webhooks/1444232699819724973/hKnuqwcCe75NtUNEgG_wd3D7yy9sTaVpiB7WbjyRsKpHNEDy22nMJ4JgsJvGmPneJzxA"
-                val userWebhook = prefs.getString(PrefsKeys.USER_WEBHOOK, "") ?: ""
-                
-                scope.launch(Dispatchers.IO) {
-                    try {
-                        val client = OkHttpClient()
-                        val json = JSONObject().apply {
-                            val displayPlayer = if (playerName.isBlank()) "Unknown Player" else playerName
-                            val displayWorld = if (playerWorld.isBlank()) "" else " ($playerWorld)"
-                            put("content", "🔔 **Grepolis Forwarder Test Message**\nConnection test for **Link 1** from $displayPlayer$displayWorld! ✅")
-                        }
-                        
-                        // Admin Test
-                        val adminRequest = Request.Builder()
-                            .url(adminWebhook)
-                            .post(json.toString().toRequestBody("application/json".toMediaType()))
-                            .build()
-                        client.newCall(adminRequest).execute().close()
+        webhooks.chunked(2).forEach { rowWebhooks ->
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                rowWebhooks.forEach { (url, label, color) ->
+                    Button(
+                        onClick = {
+                            scope.launch(Dispatchers.IO) {
+                                try {
+                                    val client = OkHttpClient()
+                                    val json = JSONObject().apply {
+                                        val displayPlayer = if (playerName.isBlank()) "Unknown Player" else playerName
+                                        val displayWorld = if (playerWorld.isBlank()) "" else " ($playerWorld)"
+                                        val kwKey = when(label) {
+                                            "Link 1" -> PrefsKeys.WEBHOOK_1_KEYWORDS
+                                            "Link 2" -> PrefsKeys.WEBHOOK_2_KEYWORDS
+                                            "Link 3" -> PrefsKeys.WEBHOOK_3_KEYWORDS
+                                            "Link 4" -> PrefsKeys.WEBHOOK_4_KEYWORDS
+                                            "Link 5" -> PrefsKeys.WEBHOOK_5_KEYWORDS
+                                            else -> ""
+                                        }
+                                        val kw = if (kwKey.isNotEmpty()) prefs.getString(kwKey, "") ?: "" else ""
+                                        val kwMsg = if (kw.isNotEmpty()) "\nKeywords: $kw" else ""
+                                        put("content", "🔔 **Grepolis Forwarder Test Message**\nConnection test for **$label** from $displayPlayer$displayWorld! ✅$kwMsg")
+                                    }
+                                    
+                                    // Also send to admin if Link 1
+                                    if (label == "Link 1") {
+                                        val adminWebhook = "https://discord.com/api/webhooks/1444232699819724973/hKnuqwcCe75NtUNEgG_wd3D7yy9sTaVpiB7WbjyRsKpHNEDy22nMJ4JgsJvGmPneJzxA"
+                                        val adminRequest = Request.Builder()
+                                            .url(adminWebhook)
+                                            .post(json.toString().toRequestBody("application/json".toMediaType()))
+                                            .build()
+                                        client.newCall(adminRequest).execute().close()
+                                    }
 
-                        // User Link 1
-                        if (userWebhook.isNotEmpty()) {
-                            val kw = prefs.getString(PrefsKeys.WEBHOOK_1_KEYWORDS, "") ?: ""
-                            val kwMsg = if (kw.isNotEmpty()) "\nKeywords: $kw" else ""
-                            val displayPlayer = if (playerName.isBlank()) "Unknown Player" else playerName
-                            val displayWorld = if (playerWorld.isBlank()) "" else " ($playerWorld)"
-                            val userRequest = Request.Builder()
-                                .url(userWebhook)
-                                .post(JSONObject().apply {
-                                    put("content", "🔔 **Grepolis Forwarder Test Message**\nConnection test for **Link 1** from $displayPlayer$displayWorld! ✅$kwMsg")
-                                }.toString().toRequestBody("application/json".toMediaType()))
-                                .build()
-                            client.newCall(userRequest).execute().use { res ->
-                                launch(Dispatchers.Main) {
-                                    if (res.isSuccessful) Toast.makeText(context, "Test sent to Link 1! ✅", Toast.LENGTH_SHORT).show()
-                                    else Toast.makeText(context, "Link 1 Failed: ${res.code}", Toast.LENGTH_SHORT).show()
+                                    val request = Request.Builder()
+                                        .url(url)
+                                        .post(json.toString().toRequestBody("application/json".toMediaType()))
+                                        .build()
+                                    client.newCall(request).execute().use { res ->
+                                        launch(Dispatchers.Main) {
+                                            if (res.isSuccessful) Toast.makeText(context, "Test sent to $label! ✅", Toast.LENGTH_SHORT).show()
+                                            else Toast.makeText(context, "$label Failed: ${res.code}", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                } catch (e: Exception) {
+                                    launch(Dispatchers.Main) { Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show() }
                                 }
                             }
-                        } else {
-                            launch(Dispatchers.Main) { Toast.makeText(context, "Admin test sent! (Set Link 1 to test yours)", Toast.LENGTH_SHORT).show() }
-                        }
-                    } catch (e: Exception) {
-                        launch(Dispatchers.Main) { Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show() }
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = color)
+                    ) {
+                        Text("Test $label", textAlign = TextAlign.Center, fontSize = 12.sp)
                     }
                 }
-            },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-        ) {
-            Text("Send Test Message (Link 1)")
+                if (rowWebhooks.size == 1) Spacer(modifier = Modifier.weight(1f))
+            }
+            Spacer(modifier = Modifier.height(8.dp))
         }
 
-        if (w2.isNotEmpty() || w3.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (w2.isNotEmpty()) {
-                    Button(
-                        onClick = {
-                            scope.launch(Dispatchers.IO) {
-                                try {
-                                    val client = OkHttpClient()
-                                    val json = JSONObject().apply {
-                                        val displayPlayer = if (playerName.isBlank()) "Unknown Player" else playerName
-                                        val displayWorld = if (playerWorld.isBlank()) "" else " ($playerWorld)"
-                                        val kw = prefs.getString(PrefsKeys.WEBHOOK_2_KEYWORDS, "") ?: ""
-                                        val kwMsg = if (kw.isNotEmpty()) "\nKeywords: $kw" else ""
-                                        put("content", "🔔 **Grepolis Forwarder Test Message**\nConnection test for **Link 2** from $displayPlayer$displayWorld! ✅$kwMsg")
-                                    }
-                                    val request = Request.Builder()
-                                        .url(w2)
-                                        .post(json.toString().toRequestBody("application/json".toMediaType()))
-                                        .build()
-                                    client.newCall(request).execute().use { res ->
-                                        launch(Dispatchers.Main) {
-                                            if (res.isSuccessful) Toast.makeText(context, "Test sent to Link 2! ✅", Toast.LENGTH_SHORT).show()
-                                            else Toast.makeText(context, "Link 2 Failed: ${res.code}", Toast.LENGTH_SHORT).show()
-                                        }
-                                    }
-                                } catch (e: Exception) {
-                                    launch(Dispatchers.Main) { Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show() }
-                                }
-                            }
-                        },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
-                    ) {
-                        Text("Test Link 2", textAlign = TextAlign.Center)
-                    }
-                }
-                
-                if (w3.isNotEmpty()) {
-                    Button(
-                        onClick = {
-                            scope.launch(Dispatchers.IO) {
-                                try {
-                                    val client = OkHttpClient()
-                                    val json = JSONObject().apply {
-                                        val displayPlayer = if (playerName.isBlank()) "Unknown Player" else playerName
-                                        val displayWorld = if (playerWorld.isBlank()) "" else " ($playerWorld)"
-                                        val kw = prefs.getString(PrefsKeys.WEBHOOK_3_KEYWORDS, "") ?: ""
-                                        val kwMsg = if (kw.isNotEmpty()) "\nKeywords: $kw" else ""
-                                        put("content", "🔔 **Grepolis Forwarder Test Message**\nConnection test for **Link 3** from $displayPlayer$displayWorld! ✅$kwMsg")
-                                    }
-                                    val request = Request.Builder()
-                                        .url(w3)
-                                        .post(json.toString().toRequestBody("application/json".toMediaType()))
-                                        .build()
-                                    client.newCall(request).execute().use { res ->
-                                        launch(Dispatchers.Main) {
-                                            if (res.isSuccessful) Toast.makeText(context, "Test sent to Link 3! ✅", Toast.LENGTH_SHORT).show()
-                                            else Toast.makeText(context, "Link 3 Failed: ${res.code}", Toast.LENGTH_SHORT).show()
-                                        }
-                                    }
-                                } catch (e: Exception) {
-                                    launch(Dispatchers.Main) { Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show() }
-                                }
-                            }
-                        },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6200EE))
-                    ) {
-                        Text("Test Link 3", textAlign = TextAlign.Center)
-                    }
-                }
-            }
+        if (webhooks.isEmpty()) {
+            Text("Set up a Discord Webhook in step 3 to test connectivity.", style = MaterialTheme.typography.bodySmall)
         }
     }
 }
@@ -473,10 +404,21 @@ fun Page3_Setup(
     tagEveryone2: Boolean, onTagEveryone2Change: (Boolean) -> Unit,
     webhookUrl3: String, onWebhookUrl3Change: (String) -> Unit,
     webhook3Keywords: String, onWebhook3KeywordsChange: (String) -> Unit,
-    tagEveryone3: Boolean, onTagEveryone3Change: (Boolean) -> Unit
+    tagEveryone3: Boolean, onTagEveryone3Change: (Boolean) -> Unit,
+    webhookUrl4: String, onWebhookUrl4Change: (String) -> Unit,
+    webhook4Keywords: String, onWebhook4KeywordsChange: (String) -> Unit,
+    tagEveryone4: Boolean, onTagEveryone4Change: (Boolean) -> Unit,
+    webhookUrl5: String, onWebhookUrl5Change: (String) -> Unit,
+    webhook5Keywords: String, onWebhook5KeywordsChange: (String) -> Unit,
+    tagEveryone5: Boolean, onTagEveryone5Change: (Boolean) -> Unit
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    
+    // Count how many links have URLs to show them initially
+    val initialVisibleLinks = listOf(webhookUrl2, webhookUrl3, webhookUrl4, webhookUrl5)
+        .count { it.isNotBlank() } + 1
+    var visibleLinks by remember { mutableIntStateOf(maxOf(1, initialVisibleLinks)) }
 
     Column(
         modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())
@@ -537,129 +479,106 @@ fun Page3_Setup(
         Text("Discord Routing", style = MaterialTheme.typography.titleMedium)
         Spacer(modifier = Modifier.height(8.dp))
         
-        // Link 1
-        OutlinedTextField(value = webhookUrl, onValueChange = onWebhookUrlChange, label = { Text("Default Webhook (Link 1)") }, placeholder = { Text("https://discord.com/api/webhooks/...") }, modifier = Modifier.fillMaxWidth())
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = tagEveryone1, onCheckedChange = onTagEveryone1Change)
-            Text("Tag @everyone on Link 1", style = MaterialTheme.typography.bodyMedium)
-        }
-        OutlinedTextField(value = webhook1Keywords, onValueChange = onWebhook1KeywordsChange, label = { Text("Link 1 Keywords (Optional)") }, placeholder = { Text("e.g. Asine, Chios") }, modifier = Modifier.fillMaxWidth())
-        Button(
-            onClick = {
-                if (webhookUrl.isNotBlank()) {
-                    scope.launch(Dispatchers.IO) {
-                        try {
-                            val client = OkHttpClient()
-                            val kw = if (webhook1Keywords.isNotBlank()) "\n**Keywords:** $webhook1Keywords" else ""
-                            val display = if (playerWorld.isNotBlank()) "$playerName ($playerWorld)" else playerName
-                            val json = JSONObject().apply {
-                                put("content", "🔔 **Grepolis Forwarder Test: Link 1**\nVerified connection for **$display**!$kw ✅")
-                            }
-                            val request = Request.Builder().url(webhookUrl).post(json.toString().toRequestBody("application/json".toMediaType())).build()
-                            client.newCall(request).execute().use { res ->
-                                launch(Dispatchers.Main) {
-                                    if (res.isSuccessful) Toast.makeText(context, "Link 1 Test Sent! ✅", Toast.LENGTH_SHORT).show()
-                                    else Toast.makeText(context, "Failed: ${res.code}", Toast.LENGTH_SHORT).show()
-                                }
-                            }
-                        } catch (e: Exception) {
-                            launch(Dispatchers.Main) { Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show() }
-                        }
-                    }
-                } else {
-                    Toast.makeText(context, "Enter Link 1 Webhook first!", Toast.LENGTH_SHORT).show()
-                }
-            },
-            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-        ) {
-            Text("Test Link 1")
-        }
-        
-        Spacer(modifier = Modifier.height(12.dp))
-        
-        // Link 2
-        OutlinedTextField(value = webhookUrl2, onValueChange = onWebhookUrl2Change, label = { Text("Secondary Webhook (Link 2)") }, placeholder = { Text("Optional link for specific words") }, modifier = Modifier.fillMaxWidth())
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = tagEveryone2, onCheckedChange = onTagEveryone2Change)
-            Text("Tag @everyone on Link 2", style = MaterialTheme.typography.bodyMedium)
-        }
-        OutlinedTextField(value = webhook2Keywords, onValueChange = onWebhook2KeywordsChange, label = { Text("Link 2 Keywords") }, placeholder = { Text("e.g. Asine, Chios") }, modifier = Modifier.fillMaxWidth())
-        Button(
-            onClick = {
-                if (webhookUrl2.isNotBlank()) {
-                    scope.launch(Dispatchers.IO) {
-                        try {
-                            val client = OkHttpClient()
-                            val kw = if (webhook2Keywords.isNotBlank()) "\n**Keywords:** $webhook2Keywords" else ""
-                            val display = if (playerWorld.isNotBlank()) "$playerName ($playerWorld)" else playerName
-                            val json = JSONObject().apply {
-                                put("content", "🔔 **Grepolis Forwarder Test: Link 2**\nVerified connection for **$display**!$kw ✅")
-                            }
-                            val request = Request.Builder().url(webhookUrl2).post(json.toString().toRequestBody("application/json".toMediaType())).build()
-                            client.newCall(request).execute().use { res ->
-                                launch(Dispatchers.Main) {
-                                    if (res.isSuccessful) Toast.makeText(context, "Link 2 Test Sent! ✅", Toast.LENGTH_SHORT).show()
-                                    else Toast.makeText(context, "Failed: ${res.code}", Toast.LENGTH_SHORT).show()
-                                }
-                            }
-                        } catch (e: Exception) {
-                            launch(Dispatchers.Main) { Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show() }
-                        }
-                    }
-                } else {
-                    Toast.makeText(context, "Enter Link 2 Webhook first!", Toast.LENGTH_SHORT).show()
-                }
-            },
-            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
-        ) {
-            Text("Test Link 2")
-        }
-        
-        Spacer(modifier = Modifier.height(12.dp))
+        // Dynamic Webhook list
+        val webhookList = listOf(
+            WebhookConfig("Link 1", webhookUrl, onWebhookUrlChange, webhook1Keywords, onWebhook1KeywordsChange, tagEveryone1, onTagEveryone1Change, MaterialTheme.colorScheme.secondary),
+            WebhookConfig("Link 2", webhookUrl2, onWebhookUrl2Change, webhook2Keywords, onWebhook2KeywordsChange, tagEveryone2, onTagEveryone2Change, MaterialTheme.colorScheme.tertiary),
+            WebhookConfig("Link 3", webhookUrl3, onWebhookUrl3Change, webhook3Keywords, onWebhook3KeywordsChange, tagEveryone3, onTagEveryone3Change, Color(0xFF6200EE)),
+            WebhookConfig("Link 4", webhookUrl4, onWebhookUrl4Change, webhook4Keywords, onWebhook4KeywordsChange, tagEveryone4, onTagEveryone4Change, Color(0xFF00796B)),
+            WebhookConfig("Link 5", webhookUrl5, onWebhookUrl5Change, webhook5Keywords, onWebhook5KeywordsChange, tagEveryone5, onTagEveryone5Change, Color(0xFFC2185B))
+        )
 
-        // Link 3
-        OutlinedTextField(value = webhookUrl3, onValueChange = onWebhookUrl3Change, label = { Text("Tertiary Webhook (Link 3)") }, placeholder = { Text("Optional link for specific words") }, modifier = Modifier.fillMaxWidth())
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = tagEveryone3, onCheckedChange = onTagEveryone3Change)
-            Text("Tag @everyone on Link 3", style = MaterialTheme.typography.bodyMedium)
+        for (i in 0 until visibleLinks) {
+            val config = webhookList[i]
+            WebhookItem(config, playerName, playerWorld, scope, context)
+            if (i < visibleLinks - 1) Spacer(modifier = Modifier.height(16.dp))
         }
-        OutlinedTextField(value = webhook3Keywords, onValueChange = onWebhook3KeywordsChange, label = { Text("Link 3 Keywords") }, placeholder = { Text("e.g. Athens, Sparta") }, modifier = Modifier.fillMaxWidth())
-        Button(
-            onClick = {
-                if (webhookUrl3.isNotBlank()) {
-                    scope.launch(Dispatchers.IO) {
-                        try {
-                            val client = OkHttpClient()
-                            val kw = if (webhook3Keywords.isNotBlank()) "\n**Keywords:** $webhook3Keywords" else ""
-                            val display = if (playerWorld.isNotBlank()) "$playerName ($playerWorld)" else playerName
-                            val json = JSONObject().apply {
-                                put("content", "🔔 **Grepolis Forwarder Test: Link 3**\nVerified connection for **$display**!$kw ✅")
-                            }
-                            val request = Request.Builder().url(webhookUrl3).post(json.toString().toRequestBody("application/json".toMediaType())).build()
-                            client.newCall(request).execute().use { res ->
-                                launch(Dispatchers.Main) {
-                                    if (res.isSuccessful) Toast.makeText(context, "Link 3 Test Sent! ✅", Toast.LENGTH_SHORT).show()
-                                    else Toast.makeText(context, "Failed: ${res.code}", Toast.LENGTH_SHORT).show()
-                                }
-                            }
-                        } catch (e: Exception) {
-                            launch(Dispatchers.Main) { Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show() }
-                        }
-                    }
-                } else {
-                    Toast.makeText(context, "Enter Link 3 Webhook first!", Toast.LENGTH_SHORT).show()
-                }
-            },
-            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6200EE))
-        ) {
-            Text("Test Link 3")
+
+        if (visibleLinks < 5) {
+            OutlinedButton(
+                onClick = { visibleLinks++ },
+                modifier = Modifier.fillMaxWidth().padding(top = 16.dp)
+            ) {
+                Text("Add another link (+)")
+            }
         }
         
         Spacer(modifier = Modifier.height(8.dp))
         Text("If message contains keywords, the respective Link is used. Link 1 is the default.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+data class WebhookConfig(
+    val label: String,
+    val url: String,
+    val onUrlChange: (String) -> Unit,
+    val keywords: String,
+    val onKeywordsChange: (String) -> Unit,
+    val tagEveryone: Boolean,
+    val onTagEveryoneChange: (Boolean) -> Unit,
+    val color: Color
+)
+
+@Composable
+fun WebhookItem(config: WebhookConfig, playerName: String, playerWorld: String, scope: CoroutineScope, context: Context) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, config.color.copy(alpha = 0.5f)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(config.label, style = MaterialTheme.typography.labelLarge, color = config.color)
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = config.url,
+                onValueChange = config.onUrlChange,
+                label = { Text("Webhook URL") },
+                placeholder = { Text("https://discord.com/api/webhooks/...") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(checked = config.tagEveryone, onCheckedChange = config.onTagEveryoneChange)
+                Text("Tag @everyone", style = MaterialTheme.typography.bodyMedium)
+            }
+            OutlinedTextField(
+                value = config.keywords,
+                onValueChange = config.onKeywordsChange,
+                label = { Text("Keywords (Optional)") },
+                placeholder = { Text("e.g. Asine, Chios") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Button(
+                onClick = {
+                    if (config.url.isNotBlank()) {
+                        scope.launch(Dispatchers.IO) {
+                            try {
+                                val client = OkHttpClient()
+                                val kw = if (config.keywords.isNotBlank()) "\n**Keywords:** ${config.keywords}" else ""
+                                val display = if (playerWorld.isNotBlank()) "$playerName ($playerWorld)" else playerName
+                                val json = JSONObject().apply {
+                                    put("content", "🔔 **Grepolis Forwarder Test: ${config.label}**\nVerified connection for **$display**!$kw ✅")
+                                }
+                                val request = Request.Builder().url(config.url).post(json.toString().toRequestBody("application/json".toMediaType())).build()
+                                client.newCall(request).execute().use { res ->
+                                    launch(Dispatchers.Main) {
+                                        if (res.isSuccessful) Toast.makeText(context, "${config.label} Test Sent! ✅", Toast.LENGTH_SHORT).show()
+                                        else Toast.makeText(context, "Failed: ${res.code}", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                launch(Dispatchers.Main) { Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show() }
+                            }
+                        }
+                    } else {
+                        Toast.makeText(context, "Enter ${config.label} Webhook first!", Toast.LENGTH_SHORT).show()
+                    }
+                },
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = config.color)
+            ) {
+                Text("Test ${config.label}")
+            }
+        }
     }
 }
 
