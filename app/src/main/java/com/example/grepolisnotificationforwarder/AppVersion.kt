@@ -14,10 +14,10 @@ package com.example.grepolisnotificationforwarder
  * Example: fixing a bug in 1.1.0.0 → becomes 1.1.1.0
  */
 object AppVersion {
-    const val MAJOR = 1
+    const val MAJOR = 2
     const val MINOR = 1
     const val PATCH = 2
-    const val BUILD = 1
+    const val BUILD = 0
 
     /**
      * Full version string — no "v" prefix here.
